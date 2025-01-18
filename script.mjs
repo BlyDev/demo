@@ -7,6 +7,7 @@ const port = (process.env.PORT || 8000);
 server.set('port', port);
 server.use(express.static('public'));
 
+server.use(express.json());
 const lines = [
     "The forest whispers softly,",
     "As the clouds begin to dance,",
@@ -30,11 +31,6 @@ const lines = [
     "Everything feels just right."
 ];
 
-function generateRandomPoem() {
-    const shuffledLines = lines.sort(() => Math.random() - 0.5);
-    return shuffledLines.slice(0, 4).join("\n"); 
-}
-
 const quotes = [
     "The only way to do great work is to love what you do. – Steve Jobs",
     "In the middle of every difficulty lies opportunity. – Albert Einstein",
@@ -43,6 +39,11 @@ const quotes = [
     "Life is what happens when you're busy making other plans. – John Lennon",
     "The best way to predict the future is to create it. – Peter Drucker",
 ];
+
+function generateRandomPoem() {
+    const shuffledLines = lines.sort(() => Math.random() - 0.5);
+    return shuffledLines.slice(0, 4).join("\n");
+}
 
 function getRoot(req, res, next) {
     res.status(HTTP_CODES.SUCCESS.OK).send('Hello World').end();
@@ -58,6 +59,19 @@ function getQuote(req, res, next) {
     res.status(HTTP_CODES.SUCCESS.OK).send(randomQuote).end();
 }
 
+server.post('/tmp/sum/:a/:b', (req, res) => {
+    const a = parseFloat(req.params.a);
+    const b = parseFloat(req.params.b);
+    if (isNaN(a) || isNaN(b)) {
+        return res.status(HTTP_CODES.SUCCESS.BAD_REQUEST).json({
+            error: "Both parameters must be valid numbers."
+        });
+    }
+    const sum = a + b;
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+        sum: sum
+    });
+});
 server.get("/", getRoot);
 server.get("/tmp/poem", getPoem);
 server.get("/tmp/quote", getQuote);
