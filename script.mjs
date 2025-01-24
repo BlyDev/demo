@@ -120,6 +120,13 @@ server.get('/temp/deck/:deck_id/card', (req, res) => {
     res.status(200).json(card);
 });
 
+server.use((err, req, res, next) => {
+    console.error(`Error during ${req.method} ${req.url}:`, err);
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error'
+    });
+});
+
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
