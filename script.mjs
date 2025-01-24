@@ -1,13 +1,17 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
 import HTTP_CODES from './utils/httpCodes.mjs';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const server = express();
-const port = (process.env.PORT || 8000);
+const port = process.env.PORT || 8000;
 
-server.set('port', port);
-server.use(express.static('public'));
-
+server.use(express.static(path.join(__dirname, 'public')));
 server.use(express.json());
+
 const lines = [
     "The forest whispers softly,",
     "As the clouds begin to dance,",
@@ -72,10 +76,50 @@ server.post('/tmp/sum/:a/:b', (req, res) => {
         sum: sum
     });
 });
-server.get("/", getRoot);
-server.get("/tmp/poem", getPoem);
-server.get("/tmp/quote", getQuote);
 
-server.listen(server.get('port'), function () {
-    console.log('server running on port', server.get('port'));
+const standardDeck = () => {
+    const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace'];
+    return suits.flatMap(suit => ranks.map(rank => ({ suit, rank })));
+};
+const decks = {};
+
+server.post('/temp/deck', (req, res) => {
+    const deckId = uuidv4();
+    decks[deckId] = standardDeck();
+    res.status(201).json({ deck_id: deckId });
+});
+
+server.patch('/temp/deck/shuffle/:deck_id', (req, res) => {
+    const { deck_id } = req.params;
+    if (!decks[deck_id]) {
+        return res.status(404).json({ error: 'Deck not found' });
+    }
+    decks[deck_id] = decks[deck_id].sort(() => Math.random() - 0.5);
+    res.status(200).json({ message: 'Deck shuffled' });
+});
+
+server.get('/temp/deck/:deck_id', (req, res) => {
+    const { deck_id } = req.params;
+    if (!decks[deck_id]) {
+        return res.status(404).json({ error: 'Deck not found' });
+    }
+    res.status(200).json(decks[deck_id]);
+});
+
+server.get('/temp/deck/:deck_id/card', (req, res) => {
+    const { deck_id } = req.params;
+    if (!decks[deck_id]) {
+        return res.status(404).json({ error: 'Deck not found' });
+    }
+    if (decks[deck_id].length === 0) {
+        return res.status(404).json({ error: 'No cards left in the deck' });
+    }
+    const randomIndex = Math.floor(Math.random() * decks[deck_id].length);
+    const [card] = decks[deck_id].splice(randomIndex, 1);
+    res.status(200).json(card);
+});
+
+server.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
 });

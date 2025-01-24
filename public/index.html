@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Deck Client</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <h1>Card Deck API Client</h1>
+  <div id="app">
+    <button id="createDeckBtn">Create Deck</button>
+    <button id="shuffleDeckBtn" disabled>Shuffle Deck</button>
+    <input type="text" id="deckIdInput" placeholder="Enter Deck ID" disabled>
+    <button id="getDeckBtn" disabled>Get Deck</button>
+    <button id="drawCardBtn" disabled>Draw Card</button>
+
+    <div id="responseContainer"></div>
+    <div id="cardContainer"></div>
+  </div>
+
+  <script src="/client.js"></script>
+</body>
+</html>

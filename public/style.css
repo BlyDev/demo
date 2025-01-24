@@ -1,0 +1,37 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background-color: #f4f4f9;
+  }
+  
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  
+  #app {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  #responseContainer {
+    margin: 20px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+  }
+  
+  #cardContainer {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
