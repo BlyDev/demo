@@ -2,13 +2,24 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import session from 'express-session';
+import FileStore from 'session-file-store';
 import HTTP_CODES from './utils/httpCodes.mjs';
+
+const fileStore = FileStore(session);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const server = express();
 const port = process.env.PORT || 8000;
 
+server.use(session({
+    store: new fileStore({ path: './sessions' }),
+    secret: 'super-secret-key-wowowowo',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }
+}));
 server.use(express.static(path.join(__dirname, 'public')));
 server.use(express.json());
 
@@ -87,6 +98,7 @@ const decks = {};
 server.post('/temp/deck', (req, res) => {
     const deckId = uuidv4();
     decks[deckId] = standardDeck();
+    req.session.deckId = deckId;
     res.status(201).json({ deck_id: deckId });
 });
 
