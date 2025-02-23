@@ -1,0 +1,103 @@
+{
+	"info": {
+		"_postman_id": "822b1a3f-ed7d-45d7-bba8-4debca0ecb4f",
+		"name": "Uno-API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42553660"
+	},
+	"item": [
+		{
+			"name": "Start ny spill",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"players\": [\"Alice\", \"Bob\", \"Charlie\"]\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/uno/start",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"uno",
+						"start"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Sjekk spill status",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/uno/state",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"uno",
+						"state"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Uno play card",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"playerId\": \"22d5da1e-af99-4987-a2b8-8baed1dc8d53\",\r\n  \"cardIndex\": 0\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/uno/play",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"uno",
+						"play"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
