@@ -1,4 +1,11 @@
 {
+  "name": "uno-api",
+  "version": "1.0.0",
+  "description": "Uno API with Express",
+  "type": "module",
+  "scripts": {
+    "start": "node script.mjs"
+  },
   "dependencies": {
     "connect-redis": "^8.0.1",
     "express": "^4.21.2",

@@ -139,6 +139,89 @@ server.use((err, req, res, next) => {
     });
 });
 
+
+
+
+
+
+const colors = ['Red', 'Yellow', 'Green', 'Blue'];
+const values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', '+2'];
+const specialCards = ['Wild', 'Wild +4'];
+
+const generateUnoDeck = () => {
+    let deck = [];
+    colors.forEach(color => {
+        values.forEach(value => {
+            deck.push({ color, value });
+            if (value !== '0') deck.push({ color, value }); 
+        });
+    });
+    specialCards.forEach(card => {
+        deck.push({ color: 'Black', value: card });
+        deck.push({ color: 'Black', value: card });
+        deck.push({ color: 'Black', value: card });
+        deck.push({ color: 'Black', value: card });
+    });
+    return deck.sort(() => Math.random() - 0.5); 
+};
+
+let unoDeck = generateUnoDeck();
+let discardPile = [];
+let players = [];
+let currentPlayerIndex = 0;
+
+
+server.post('/api/uno/start', (req, res) => {
+    players = req.body.players.map(name => ({ id: uuidv4(), name, hand: [] }));
+    unoDeck = generateUnoDeck();
+    discardPile = [unoDeck.pop()];
+    currentPlayerIndex = 0;
+    players.forEach(player => {
+        for (let i = 0; i < 7; i++) {
+            player.hand.push(unoDeck.pop());
+        }
+    });
+    res.status(201).json({ players, discardPile, currentPlayer: players[currentPlayerIndex].name });
+});
+
+server.get('/api/uno/state', (req, res) => {
+    res.status(200).json({ players, discardPile, currentPlayer: players[currentPlayerIndex].name });
+});
+
+
+server.post('/api/uno/play', (req, res) => {
+    const { playerId, cardIndex } = req.body;
+    const player = players.find(p => p.id === playerId);
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+    if (players[currentPlayerIndex].id !== playerId) return res.status(400).json({ error: 'Not your turn' });
+    const playedCard = player.hand[cardIndex];
+    const topCard = discardPile[discardPile.length - 1];
+    if (playedCard.color === topCard.color || playedCard.value === topCard.value || playedCard.color === 'Black') {
+        player.hand.splice(cardIndex, 1);
+        discardPile.push(playedCard);
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        res.status(200).json({ playedCard, nextPlayer: players[currentPlayerIndex].name });
+    } else {
+        res.status(400).json({ error: 'Invalid move' });
+    }
+});
+
+
+server.post('/api/uno/draw', (req, res) => {
+    const { playerId } = req.body;
+    const player = players.find(p => p.id === playerId);
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+    if (players[currentPlayerIndex].id !== playerId) return res.status(400).json({ error: 'Not your turn' });
+    if (unoDeck.length === 0) {
+        unoDeck = discardPile.slice(0, -1).sort(() => Math.random() - 0.5);
+        discardPile = [discardPile[discardPile.length - 1]];
+    }
+    const drawnCard = unoDeck.pop();
+    player.hand.push(drawnCard);
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    res.status(200).json({ drawnCard, nextPlayer: players[currentPlayerIndex].name });
+});
+
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
