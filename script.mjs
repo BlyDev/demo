@@ -142,6 +142,8 @@ server.use((err, req, res, next) => {
 
 
 
+//------------------------------------------------------------------------------------------------------------
+
 
 
 const colors = ['Red', 'Yellow', 'Green', 'Blue'];
@@ -153,7 +155,7 @@ const generateUnoDeck = () => {
     colors.forEach(color => {
         values.forEach(value => {
             deck.push({ color, value });
-            if (value !== '0') deck.push({ color, value }); 
+            if (value !== '0') deck.push({ color, value });
         });
     });
     specialCards.forEach(card => {
@@ -162,66 +164,215 @@ const generateUnoDeck = () => {
         deck.push({ color: 'Black', value: card });
         deck.push({ color: 'Black', value: card });
     });
-    return deck.sort(() => Math.random() - 0.5); 
+    return deck.sort(() => Math.random() - 0.5);
 };
 
 let unoDeck = generateUnoDeck();
 let discardPile = [];
 let players = [];
 let currentPlayerIndex = 0;
-
+let direction = 1;
 
 server.post('/api/uno/start', (req, res) => {
+    console.log("\n--- Starting New Uno Game ---");
+
+    if (!req.body.players || req.body.players.length < 2) {
+        console.error("ERROR: At least two players are required!");
+        return res.status(400).json({ error: "At least two players are required to start the game." });
+    }
+
     players = req.body.players.map(name => ({ id: uuidv4(), name, hand: [] }));
     unoDeck = generateUnoDeck();
     discardPile = [unoDeck.pop()];
     currentPlayerIndex = 0;
+    direction = 1;
+
     players.forEach(player => {
         for (let i = 0; i < 7; i++) {
             player.hand.push(unoDeck.pop());
         }
     });
+
+    console.log("Game Started! Players:", players);
+    
     res.status(201).json({ players, discardPile, currentPlayer: players[currentPlayerIndex].name });
 });
 
+
 server.get('/api/uno/state', (req, res) => {
-    res.status(200).json({ players, discardPile, currentPlayer: players[currentPlayerIndex].name });
-});
+    console.log("\n--- Fetching Game State ---");
 
-
-server.post('/api/uno/play', (req, res) => {
-    const { playerId, cardIndex } = req.body;
-    const player = players.find(p => p.id === playerId);
-    if (!player) return res.status(404).json({ error: 'Player not found' });
-    if (players[currentPlayerIndex].id !== playerId) return res.status(400).json({ error: 'Not your turn' });
-    const playedCard = player.hand[cardIndex];
-    const topCard = discardPile[discardPile.length - 1];
-    if (playedCard.color === topCard.color || playedCard.value === topCard.value || playedCard.color === 'Black') {
-        player.hand.splice(cardIndex, 1);
-        discardPile.push(playedCard);
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-        res.status(200).json({ playedCard, nextPlayer: players[currentPlayerIndex].name });
-    } else {
-        res.status(400).json({ error: 'Invalid move' });
+    if (players.length === 0) {
+        console.error("ERROR: No players in the game!");
+        return res.status(400).json({ error: "No players in the game." });
     }
+
+    if (!players[currentPlayerIndex]) {
+        console.error("ERROR: Current player index is invalid!");
+        return res.status(400).json({ error: "Invalid game state. No current player." });
+    }
+
+    res.status(200).json({
+        players,
+        discardPile,
+        currentPlayer: players[currentPlayerIndex]?.name || "Unknown"
+    });
+
+    console.log("Game state sent:", {
+        players,
+        discardPile,
+        currentPlayer: players[currentPlayerIndex]?.name || "Unknown"
+    });
 });
+
 
 
 server.post('/api/uno/draw', (req, res) => {
     const { playerId } = req.body;
     const player = players.find(p => p.id === playerId);
-    if (!player) return res.status(404).json({ error: 'Player not found' });
-    if (players[currentPlayerIndex].id !== playerId) return res.status(400).json({ error: 'Not your turn' });
+
+    console.log("\n--- Incoming Draw Request ---");
+    console.log("🔹 Player ID:", playerId);
+
+    if (!player) {
+        console.error("ERROR: Player not found!");
+        return res.status(404).json({ error: 'Player not found' });
+    }
+
+    if (players[currentPlayerIndex].id !== playerId) {
+        console.error("ERROR: Not your turn!");
+        return res.status(400).json({ error: 'Not your turn' });
+    }
+
     if (unoDeck.length === 0) {
+        console.warn("🔄 Reshuffling discard pile into deck...");
         unoDeck = discardPile.slice(0, -1).sort(() => Math.random() - 0.5);
         discardPile = [discardPile[discardPile.length - 1]];
     }
+
     const drawnCard = unoDeck.pop();
     player.hand.push(drawnCard);
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+
+    console.log(`${player.name} drew a card:`, drawnCard);
+
+    currentPlayerIndex = getNextPlayerIndex();
     res.status(200).json({ drawnCard, nextPlayer: players[currentPlayerIndex].name });
 });
+
+
+
+server.post('/api/uno/play', (req, res) => {
+    const { playerId, cardIndex, chosenColor } = req.body;
+    const player = players.find(p => p.id === playerId);
+
+    console.log("\n--- Incoming Play Request ---");
+    console.log("Player ID:", playerId);
+    console.log("Card Index:", cardIndex);
+    console.log("Chosen Color:", chosenColor);
+
+    if (!player) {
+        console.error("ERROR: Player not found!");
+        return res.status(404).json({ error: 'Player not found' });
+    }
+
+    if (players[currentPlayerIndex].id !== playerId) {
+        console.error("ERROR: Not your turn!");
+        return res.status(400).json({ error: 'Not your turn' });
+    }
+
+    const playedCard = player.hand[cardIndex];
+    const topCard = discardPile[discardPile.length - 1];
+
+    console.log("Played Card:", playedCard);
+    console.log("Top Card Before Play:", topCard);
+
+    if (playedCard.color === "Black") {
+        if (!["Red", "Yellow", "Green", "Blue"].includes(chosenColor)) {
+            console.error("ERROR: Invalid color choice! Received:", chosenColor);
+            return res.status(400).json({ error: "Invalid color choice" });
+        }
+
+        console.log("Wild card played! Changing color to:", chosenColor);
+
+        discardPile.push({ color: chosenColor, value: playedCard.value });
+
+        player.hand.splice(cardIndex, 1);
+
+        console.log("Wild card applied! Discard pile now:", discardPile[discardPile.length - 1]);
+
+        if (playedCard.value === "Wild +4") {
+            giveCardsToNextPlayer(4);
+        }
+
+        currentPlayerIndex = getNextPlayerIndex();
+        return res.status(200).json({ playedCard, nextPlayer: players[currentPlayerIndex].name });
+    }
+
+    console.log("Validating move: Played Card:", playedCard, "Top Card:", topCard);
+    if (playedCard.color !== topCard.color && playedCard.value !== topCard.value) {
+        console.error("ERROR: Invalid move - Colors do not match!");
+        console.log("Expected Color:", topCard.color, " | Provided Color:", playedCard.color);
+        return res.status(400).json({ error: "Invalid move" });
+    }
+
+    console.log("Move is valid!");
+
+    player.hand.splice(cardIndex, 1);
+    discardPile.push(playedCard);
+
+    console.log("Top Card After Play:", discardPile[discardPile.length - 1]);
+
+    switch (playedCard.value) {
+        case "+2":
+            giveCardsToNextPlayer(2);
+            break;
+        case "Wild +4":
+            giveCardsToNextPlayer(4);
+            break;
+        case "Skip":
+            currentPlayerIndex = getNextPlayerIndex();
+            break;
+        case "Reverse":
+            direction *= -1; 
+            if (players.length === 2) {
+                currentPlayerIndex = getNextPlayerIndex();
+            }
+            break;
+    }
+
+    currentPlayerIndex = getNextPlayerIndex();
+    console.log("Next Player:", players[currentPlayerIndex].name);
+
+    return res.status(200).json({ playedCard, nextPlayer: players[currentPlayerIndex].name });
+});
+
+const giveCardsToNextPlayer = (numCards) => {
+    const nextPlayerIndex = getNextPlayerIndex();
+    const nextPlayer = players[nextPlayerIndex];
+
+    if (unoDeck.length < numCards) {
+        unoDeck = discardPile.slice(0, -1).sort(() => Math.random() - 0.5);
+        discardPile = [discardPile[discardPile.length - 1]];
+    }
+
+    for (let i = 0; i < numCards; i++) {
+        if (unoDeck.length > 0) {
+            nextPlayer.hand.push(unoDeck.pop());
+        }
+    }
+    console.log(`${nextPlayer.name} drew ${numCards} cards!`);
+};
+
+const getNextPlayerIndex = () => {
+    return (currentPlayerIndex + direction + players.length) % players.length;
+};
 
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js")
+        .then(() => console.log("Service Worker registered"))
+        .catch((err) => console.log("Service Worker failed:", err));
+}

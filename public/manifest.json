@@ -1,0 +1,10 @@
+{
+    "name": "Uno PWA",
+    "short_name": "Uno",
+    "description": "Spill Uno digitalt!",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ff5733"
+  }
+  

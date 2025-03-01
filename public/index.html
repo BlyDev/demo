@@ -3,22 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Card Deck Client</title>
+  <title>Uno Game</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="manifest" href="/manifest.json">
 </head>
 <body>
-  <h1>Card Deck API Client</h1>
-  <div id="app">
-    <button id="createDeckBtn">Create Deck</button>
-    <button id="shuffleDeckBtn" disabled>Shuffle Deck</button>
-    <input type="text" id="deckIdInput" placeholder="Enter Deck ID" disabled>
-    <button id="getDeckBtn" disabled>Get Deck</button>
-    <button id="drawCardBtn" disabled>Draw Card</button>
+  <h1>Uno Game</h1>
+
+  <div id="gameSetup">
+    <input type="text" id="playerNames" placeholder="Enter player names, comma-separated">
+    <button id="startGameBtn">Start Game</button>
+  </div>
+
+  <div id="gameArea" style="display:none;">
+    <h2>Current Turn: <span id="currentPlayer"></span></h2>
+    <h3>Top Card: <span id="topCard"></span></h3>
+
+    <h3>Your Hand:</h3>
+    <div id="playerHand"></div>
+
+    <button id="drawCardBtn">Draw Card</button>
+    <button id="playCardBtn" disabled>Play Selected Card</button>
 
     <div id="responseContainer"></div>
-    <div id="cardContainer"></div>
   </div>
 
   <script src="/client.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js")
+          .then(() => console.log("Service Worker registered"))
+          .catch((err) => console.log("Service Worker failed:", err));
+    }
+  </script>
 </body>
 </html>
