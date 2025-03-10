@@ -97,17 +97,20 @@ server.post('/api/uno/start', async (req, res) => {
                 }
             }
         });
-        let gameId;
+        let gameId = null;
         try {
             const gameResult = await query(
                 'INSERT INTO games (status) VALUES ($1) RETURNING id',
                 ['active']
             );
-            console.log("Game inserted:", gameResult.rows);
-            gameId = gameResult.rows[0].id;
+            if (gameResult.rows.length > 0) {
+                gameId = gameResult.rows[0].id;
+                console.log("Game inserted:", gameResult.rows);
+            } else {
+                console.warn("Warning: No game id returned from DB");
+            }
         } catch (dbError) {
             console.error("Error inserting game:", dbError);
-            throw dbError;
         }
         for (const player of players) {
             try {
@@ -117,7 +120,6 @@ server.post('/api/uno/start', async (req, res) => {
                 );
             } catch (dbError) {
                 console.error(`Error inserting player ${player.name}:`, dbError);
-                throw dbError;
             }
         }
         console.log("Game Started! Players:", players);
@@ -154,54 +156,92 @@ server.get('/api/uno/state', (req, res) => {
 server.post('/api/uno/draw', async (req, res) => {
     try {
         const { playerId } = req.body;
-        const player = players.find(p => p.id === playerId);
         console.log("\n--- Incoming Draw Request ---");
         console.log("🔹 Player ID:", playerId);
+        
+        const player = players.find(p => p.id === playerId);
         if (!player) {
             console.error("ERROR: Player not found!");
             return res.status(404).json({ error: 'Player not found' });
         }
+        
         if (players[currentPlayerIndex].id !== playerId) {
             console.error("ERROR: Not your turn!");
             return res.status(400).json({ error: 'Not your turn' });
         }
+        
         if (unoDeck.length === 0) {
             console.warn("🔄 Reshuffling discard pile into deck...");
-            unoDeck = discardPile.slice(0, -1).sort(() => Math.random() - 0.5);
-            discardPile = [discardPile[discardPile.length - 1]];
+            if (discardPile.length > 1) {
+                const topCard = discardPile[discardPile.length - 1];
+                unoDeck = discardPile.slice(0, -1).sort(() => Math.random() - 0.5);
+                discardPile = [topCard];
+            } else {
+                console.error("ERROR: Not enough cards to reshuffle.");
+                return res.status(500).json({ error: "No cards left to draw." });
+            }
         }
+        
         const drawnCard = unoDeck.pop();
+        if (!drawnCard) {
+            console.error("ERROR: No card drawn, deck might be empty.");
+            return res.status(500).json({ error: "Failed to draw a card." });
+        }
         player.hand.push(drawnCard);
         console.log(`${player.name} drew a card:`, drawnCard);
-        await query('UPDATE players SET hand = $1 WHERE player_id = $2', [JSON.stringify(player.hand), player.id]);
+        
+        try {
+            await query(
+                'UPDATE players SET hand = $1 WHERE player_id = $2',
+                [JSON.stringify(player.hand), player.id]
+            );
+        } catch (dbError) {
+            console.error(`Error updating hand for ${player.name} in draw:`, dbError);
+        }
+        
         currentPlayerIndex = getNextPlayerIndex();
-        res.status(200).json({ drawnCard, nextPlayer: players[currentPlayerIndex].name });
+        return res.status(200).json({ drawnCard, nextPlayer: players[currentPlayerIndex].name });
     } catch (error) {
         console.error("Error during draw:", error);
-        res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 server.post('/api/uno/play', async (req, res) => {
     try {
         const { playerId, cardIndex, chosenColor } = req.body;
-        const player = players.find(p => p.id === playerId);
         console.log("\n--- Incoming Play Request ---");
         console.log("Player ID:", playerId);
         console.log("Card Index:", cardIndex);
         console.log("Chosen Color:", chosenColor);
+        
+        const player = players.find(p => p.id === playerId);
         if (!player) {
             console.error("ERROR: Player not found!");
             return res.status(404).json({ error: 'Player not found' });
         }
+        
         if (players[currentPlayerIndex].id !== playerId) {
             console.error("ERROR: Not your turn!");
             return res.status(400).json({ error: 'Not your turn' });
         }
+        
+        if (typeof cardIndex !== 'number' || cardIndex < 0 || cardIndex >= player.hand.length) {
+            console.error("ERROR: Invalid card index:", cardIndex);
+            return res.status(400).json({ error: "Invalid card index" });
+        }
+        
         const playedCard = player.hand[cardIndex];
+        if (!playedCard) {
+            console.error("ERROR: No card found at index", cardIndex);
+            return res.status(400).json({ error: "No card at given index" });
+        }
+        
         const topCard = discardPile[discardPile.length - 1];
         console.log("Played Card:", playedCard);
         console.log("Top Card Before Play:", topCard);
+        
         if (playedCard.color === "Black") {
             if (!["Red", "Yellow", "Green", "Blue"].includes(chosenColor)) {
                 console.error("ERROR: Invalid color choice! Received:", chosenColor);
@@ -210,26 +250,58 @@ server.post('/api/uno/play', async (req, res) => {
             console.log("Wild card played! Changing color to:", chosenColor);
             discardPile.push({ color: chosenColor, value: playedCard.value });
             player.hand.splice(cardIndex, 1);
-            await query('UPDATE players SET hand = $1 WHERE player_id = $2', [JSON.stringify(player.hand), player.id]);
+            try {
+                await query('UPDATE players SET hand = $1 WHERE player_id = $2', [
+                    JSON.stringify(player.hand),
+                    player.id
+                ]);
+            } catch (dbError) {
+                console.error(`Error updating hand for ${player.name} in play (wild):`, dbError);
+            }
             if (playedCard.value === "Wild +4") {
-                await giveCardsToNextPlayer(4);
+                try {
+                    await giveCardsToNextPlayer(4);
+                } catch (dbError) {
+                    console.error("Error giving cards to next player for Wild +4:", dbError);
+                }
             }
             currentPlayerIndex = getNextPlayerIndex();
             return res.status(200).json({ playedCard, nextPlayer: players[currentPlayerIndex].name });
         }
+        
         if (playedCard.color !== topCard.color && playedCard.value !== topCard.value) {
-            console.error("ERROR: Invalid move - Colors do not match!");
+            console.error("ERROR: Invalid move - Colors or values do not match!", {
+                topCard,
+                playedCard
+            });
             return res.status(400).json({ error: "Invalid move" });
         }
+        
         player.hand.splice(cardIndex, 1);
         discardPile.push(playedCard);
-        await query('UPDATE players SET hand = $1 WHERE player_id = $2', [JSON.stringify(player.hand), player.id]);
+        try {
+            await query('UPDATE players SET hand = $1 WHERE player_id = $2', [
+                JSON.stringify(player.hand),
+                player.id
+            ]);
+        } catch (dbError) {
+            console.error(`Error updating hand for ${player.name} in play:`, dbError);
+        }
+        
         switch (playedCard.value) {
             case "+2":
-                await giveCardsToNextPlayer(2);
+                try {
+                    await giveCardsToNextPlayer(2);
+                } catch (dbError) {
+                    console.error("Error giving cards to next player for +2:", dbError);
+                }
                 break;
             case "Wild +4":
-                await giveCardsToNextPlayer(4);
+                try {
+                    await giveCardsToNextPlayer(4);
+                } catch (dbError) {
+                    console.error("Error giving cards to next player for Wild +4:", dbError);
+                }
                 break;
             case "Skip":
                 currentPlayerIndex = getNextPlayerIndex();
@@ -240,7 +312,10 @@ server.post('/api/uno/play', async (req, res) => {
                     currentPlayerIndex = getNextPlayerIndex();
                 }
                 break;
+            default:
+                break;
         }
+        
         currentPlayerIndex = getNextPlayerIndex();
         console.log("Next Player:", players[currentPlayerIndex].name);
         return res.status(200).json({ playedCard, nextPlayer: players[currentPlayerIndex].name });
@@ -249,6 +324,7 @@ server.post('/api/uno/play', async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
