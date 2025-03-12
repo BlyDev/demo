@@ -1,6 +1,7 @@
 Versjon: 1.0.0
 Dette er et Uno API bygget med Node.js og Express, publisert på Render. API støtter CRUD operasjoner for å spille Uno digitalt, inkludert start av nytt spill, spille kort og trekke kort.
 PROD URL: https://demo-1-o5lq.onrender.com
+Skriv inn navn med komma for eks: Kevin, Knut, Mathias
 
 Start spillet:
 POST /api/uno/start/
