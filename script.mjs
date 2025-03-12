@@ -13,6 +13,14 @@ const __dirname = path.dirname(__filename);
 const server = express();
 const port = process.env.PORT || 8000;
 
+function requestLogger(req, res, next) {
+    console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
+    console.log(`Body:`, req.body);
+    console.log(`Headers:`, req.headers);
+    next();
+}
+
+server.use(requestLogger);
 server.use(cors());
 server.use(session({
     store: new fileStore({ path: './sessions' }),
@@ -23,7 +31,12 @@ server.use(session({
 }));
 server.use(express.static(path.join(__dirname, 'public')));
 server.use(express.json());
-
+server.use((err, req, res, next) => {
+    console.error(`Error: ${err.message}`);
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error'
+    });
+});
 
 let unoDeck = [];
 let discardPile = [];
@@ -100,9 +113,10 @@ server.post('/api/uno/start', async (req, res) => {
         let gameId = null;
         try {
             const gameResult = await query(
-                'INSERT INTO games (status) VALUES ($1) RETURNING id',
-                ['active']
+                'INSERT INTO games (status, players, discard_pile, current_player_index, direction) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                ['active', JSON.stringify(players), JSON.stringify(discardPile), currentPlayerIndex, direction]
             );
+            
             if (gameResult.rows.length > 0) {
                 gameId = gameResult.rows[0].id;
                 console.log("Game inserted:", gameResult.rows);
