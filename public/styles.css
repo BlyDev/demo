@@ -22,12 +22,6 @@ body {
     cursor: pointer;
   }
   
-  #responseContainer {
-    margin: 20px 0;
-    padding: 10px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-  }
   
   #cardContainer {
     margin-top: 20px;

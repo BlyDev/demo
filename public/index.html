@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Uno Game</title>
+  <title>Uno Spill</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="manifest" href="/manifest.json">
 </head>
 <body>
-  <h1>Uno Game</h1>
+  <h1>Uno Spill</h1>
 
   <div id="gameSetup">
-    <input type="text" id="playerNames" placeholder="Enter player names, comma-separated">
-    <button id="startGameBtn">Start Game</button>
+    <input type="text" id="playerNames" placeholder="Skriv inn spiller navn, komma separert">
+    <button id="startGameBtn">Start Spill</button>
   </div>
 
   <div id="gameArea" style="display:none;">
-    <h2>Current Turn: <span id="currentPlayer"></span></h2>
-    <h3>Top Card: <span id="topCard"></span></h3>
+    <h2>Gjeldende Tur: <span id="currentPlayer"></span></h2>
+    <h3>Top Kort: <span id="topCard"></span></h3>
 
-    <h3>Your Hand:</h3>
+    <h3>Ditt Hånd:</h3>
     <div id="playerHand"></div>
 
-    <button id="drawCardBtn">Draw Card</button>
-    <button id="playCardBtn" disabled>Play Selected Card</button>
+    <button id="drawCardBtn">Trekk Kort</button>
+    <button id="playCardBtn" disabled>Spill Valgte Kort</button>
 
     <div id="responseContainer"></div>
   </div>

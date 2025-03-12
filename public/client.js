@@ -27,7 +27,7 @@ async function apiRequest(method, endpoint, body = null) {
 
 startGameBtn.addEventListener("click", async () => {
     const playerNames = playerNamesInput.value.split(",").map(name => name.trim());
-    if (playerNames.length < 2) return alert("You need at least two players!");
+    if (playerNames.length < 2) return alert("Du trenger minst 2 spillere!");
 
     try {
         const response = await apiRequest("POST", "/api/uno/start", { players: playerNames });
@@ -38,25 +38,25 @@ startGameBtn.addEventListener("click", async () => {
 
         updateGameState();
     } catch (error) {
-        console.error("Error starting game:", error);
-        alert("Failed to start game. Please try again.");
+        console.error("Feil ved starting av spill:", error);
+        alert("Starting av spill mislykket. Prøv igjen senere.");
     }
 });
 
 async function updateGameState() {
-  console.log("Refreshing Game State...");
+  console.log("Henter spill status...");
 
   try {
       const response = await apiRequest("GET", "/api/uno/state");
 
       if (response.error) {
-          console.warn("Game state error:", response.error);
+          console.warn("Spill status feil:", response.error);
           return; 
       }
 
-      console.log("Game State Updated:", response);
+      console.log("Spill status oppdatert:", response);
 
-      currentPlayerDisplay.innerText = response.currentPlayer || "Unknown";
+      currentPlayerDisplay.innerText = response.currentPlayer || "Ukjent";
       const topCard = response.discardPile[response.discardPile.length - 1];
       topCardDisplay.innerText = `${topCard.color} ${topCard.value}`;
 
@@ -80,7 +80,7 @@ async function updateGameState() {
       }
 
   } catch (error) {
-      console.warn("Failed to update game state (probably not started yet):", error.message);
+      console.warn("Feilet å starte spill (Sikkert ikke starta enda):", error.message);
   }
 }
 
@@ -92,13 +92,13 @@ playCardBtn.addEventListener("click", async () => {
 
     if (selectedCard.color === "Black") {
         do {
-            chosenColor = prompt("Choose a color: Red, Yellow, Green, or Blue");
+            chosenColor = prompt("Velg et farge: Red, Yellow, Green, or Blue");
             if (chosenColor) {
                 chosenColor = chosenColor.trim();
             }
         } while (!["Red", "Yellow", "Green", "Blue"].includes(chosenColor));
 
-        console.log("Chosen Color:", chosenColor);
+        console.log("Valgt farge:", chosenColor);
     }
 
     console.log("Sending Request to Server:");
@@ -113,11 +113,11 @@ playCardBtn.addEventListener("click", async () => {
             chosenColor: chosenColor || null 
         });
 
-        console.log("Move Successful:", response);
+        console.log("Move vellykket:", response);
         playCardBtn.disabled = true;
         updateGameState();
     } catch (error) {
-        console.error("Server Error:", error);
+        console.error("Server Feil:", error);
         alert(error.message);
     }
 });
@@ -126,10 +126,10 @@ drawCardBtn.addEventListener("click", async () => {
     try {
         const response = await apiRequest("POST", "/api/uno/draw", { playerId: currentPlayerId });
 
-        console.log("Card Drawn:", response);
+        console.log("Kort trukket:", response);
         updateGameState();
     } catch (error) {
-        console.error("Error drawing card:", error);
+        console.error("Feil trekking av kort:", error);
         alert(error.message);
     }
 });
