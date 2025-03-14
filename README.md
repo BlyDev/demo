@@ -3,6 +3,7 @@ Dette er et Uno API bygget med Node.js og Express, publisert p책 Render. API st�
 PROD URL: https://demo-1-o5lq.onrender.com
 
 Skriv inn navn med komma for eks: Kevin, Knut, Mathias.
+Hvis spillet ikke starter, bare refresh siden og skriv inn navnene p책 nytt.
 Hvis du f책r svart kort, s책 m책 du legge p책 en svart kort.
 
 Start spillet:
